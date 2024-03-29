@@ -92,11 +92,9 @@ services:
     container_name: oracle
     ports:
       - "1521:1521"
-      - "5500:5500"
+    volumes:
+      - ./scripts:/scripts
     environment:
       TZ: ${TZ_SET}
-    volumes:
-      - oracledate:/opt/oracle/oradata
-      - ./scripts:/scripts
-volumes:
-  oracledate:
+    extra_hosts:
+      - "moby:127.0.0.1"

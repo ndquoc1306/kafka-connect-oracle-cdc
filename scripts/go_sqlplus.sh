@@ -13,4 +13,3 @@ else
     sqlplus '/ as sysdba' @${SQL_FILE}
 fi
 
-
