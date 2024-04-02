@@ -32,7 +32,7 @@ From [Stackoverflow](https://stackoverflow.com/questions/47887403/pull-access-de
 docker login --username YourDockerUserName --password-stdin
 <<Enter your password>>
 
-docker pull store/oracle/database-enterprise:12.2.0.1
+docker pull ndquoc1306/oracledb:19c
 ```
 
 # Docker Startup
@@ -55,43 +55,28 @@ docker-compose exec oracle /scripts/go_sqlplus.sh /scripts/oracle_setup_docker
 ```
 
 ## Sample Data
-This SQL script also creates an `EMP` table, and adds four employees.
+This SQL script also creates tables
 
-| I (primary key)    | Name |
-| ----------- | ----------- |
-| 1           | Bob         |
-| 2           | Jane        |
-| 3           | Mary        |
-| 4           | Alice       |
-
-
-# Create topics
-Optional, but it's a good idea to create the topics 
-```
-kafka-topics --bootstrap-server localhost:9092 --create --partitions 1 --replication-factor 1 --topic ORCLCDB.C__MYUSER.EMP
-kafka-topics --bootstrap-server localhost:9092 --create --partitions 1 --replication-factor 1 --topic SimpleOracleCDC-ORCLCDB-redo-log
-```
 
 
 ## Connector Configuration 
 
 Check the OracleCdcSourceConnector source plug-in is available
 ```
-curl -s -X GET -H 'Content-Type: application/json' http://localhost:8083/connector-plugins | jq '.'
+curl -s -X GET -H 'Content-Type: application/json' http://localhost:8083/connector-plugins
 ```
 
 And look for an occurrence of `"class": "io.confluent.connect.oracle.cdc.OracleCdcSourceConnector"`
 
 
 
-Establish the `SimpleOracleCDC` connector
+Establish the `jsonCDC` connector
 ```
-curl -s -X POST -H 'Content-Type: application/json' --data @SimpleOracleCDC.json http://localhost:8083/connectors | jq
-```
+curl -s -X POST -H 'Content-Type: application/json' --data @/usr/share/java/confluentinc-kafka-connect-oracle-cdc/jsonCDC.json http://localhost:8083/connectors```
 
 Check the status of the connector. You may need to wait a while for the status to show up
 ```
-curl -s -X GET -H 'Content-Type: application/json' http://localhost:8083/connectors/SimpleOracleCDC/status | jq
+curl -s -X GET -H 'Content-Type: application/json' http://localhost:8083/connectors/jsonCDC/status
 ```
 
 
@@ -99,126 +84,22 @@ curl -s -X GET -H 'Content-Type: application/json' http://localhost:8083/connect
 ## Check topic
 If you have Kafka tools installed locally, you can look at the de-serialised AVRO like this
 ```
-kafka-avro-console-consumer --bootstrap-server localhost:9092 --topic ORCLCDB.C__MYUSER.EMP --from-beginning
+exec kafka => kafka-console-consumer --bootstrap-server localhost:9092 --topic json --from-beginning
 ```
 
-Or if you don't have the Kafka tools installed, you can launch them via a container like
-```
-docker-compose exec kafka-connect kafka-avro-console-consumer --bootstrap-server kafka:29092 --property schema.registry.url="http://schema-registry:8081" --topic ORCLCDB.C__MYUSER.EMP --from-beginning
-```
-
-The (simplified) output of kafka-avro-console-consumer should look something like
-```
-{"I":"\u0001","NAME":{"string":"Bob"}}
-{"I":"\u0002","NAME":{"string":"Jane"}}
-{"I":"\u0003","NAME":{"string":"Mary"}}
-{"I":"\u0004","NAME":{"string":"Alice"}}
-```
 
 # Schema
 Let's see what schemas we have registered now
 ```console
-curl -s -X GET http://localhost:8081/subjects/ORCLCDB.C__MYUSER.EMP-value/versions/1 | jq -r .schema | jq .
+curl -s -X GET http://localhost:8081/subjects/ORCLCDB.C__BLOGWEBSITE.BLOG-value/versions/1
 ```
 
 Amongst other things, you'll see version 1 of the schema has been registered like this
 ```
-  "fields": [
-    {
-      "name": "I",
-      "type": {
-        "type": "bytes"
-    },
-    {
-      "name": "NAME",
-      "type": [
-        "string"
-      ]
-    }
+ ....
   ```
-
-
-# Insert, update and delete some data
-
-Run `docker-compose exec oracle /scripts/go_sqlplus.sh` followed by this SQL
-
-```
-insert into C##MYUSER.emp (name) values ('Dale');
-insert into C##MYUSER.emp (name) values ('Emma');
-update C##MYUSER.emp set name = 'Robert' where name = 'Bob';
-delete C##MYUSER.emp where name = 'Jane';
-commit;
-exit
 ```
 
-## Updated Sample Data
-This adds 2 rows to `EMP` table, updates 1 row, and deletes 1 row.
-
-| I (primary key)    | Name |
-| ----------- | ----------- |
-| 1           | Bob --> Robert         |
-| 2           | Jane (deleted)        |
-| 3           | Mary        |
-| 4           | Alice       |
-| 5           | Dale        |
-| 6           | Emma        |
-
-
-The (simplified) output of kafka-avro-console-consumer should look something like
-```
-{"I":"\u0005","NAME":{"string":"Dale"},"op_type":{"string":"I"}}
-{"I":"\u0006","NAME":{"string":"Emma"},"op_type":{"string":"I"}}
-{"I":"\u0001","NAME":{"string":"Robert"},"op_type":{"string":"U"}}
-{"I":"\u0002","NAME":{"string":"Jane"},"op_type":{"string":"D"}
-```
-
-
-
-# DDL 
-Run `docker-compose exec oracle /scripts/go_sqlplus.sh` followed by this SQL
-
-```
-ALTER TABLE C##MYUSER.EMP ADD (SURNAME VARCHAR2(100));
-
-insert into C##MYUSER.emp (name, surname) values ('Mickey', 'Mouse');
-commit;
-```
-
-## Updated Sample Data
-Our new row looks like this (note the new surname column)
-
-| I (primary key)    | Name | Surname |
-| ----------- | ----------- | -------- |
-| 7           | Mickey        | Mouse |
-
-
-## Schema mutation
-Let's see what schemas we have registered now. We have data registered against version 1 and version 2 of the schema
-
-```console
-curl -s -X GET http://localhost:8081/subjects/ORCLCDB.C__MYUSER.EMP-value/versions
-
-curl -s -X GET http://localhost:8081/subjects/ORCLCDB.C__MYUSER.EMP-value/versions/1 | jq '.'
-
-curl -s -X GET http://localhost:8081/subjects/ORCLCDB.C__MYUSER.EMP-value/versions/2 | jq '.'
-
-or you can also use:
-
-curl -s -X GET http://localhost:8081/subjects/ORCLCDB.C__MYUSER.EMP-value/versions/2 | jq -r .schema | jq .
-```
-
-Note, schema version 2 has this addition
-
-```
-    {
-      "name": "SURNAME",
-      "type": [
-        "null",
-        "string"
-      ],
-      "default": null
-    }
-```
 
 
 ## Connector Delete Configuration 
