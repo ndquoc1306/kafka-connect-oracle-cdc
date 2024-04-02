@@ -1,0 +1,43 @@
+ORACLE 19c on Docker: https://www.youtube.com/watch?v=xY0Y1tWm8D4
+----------------
+Pre-requsite:
+1. Docker installed
+2. Git installed
+3. WinSCP to copy the files to Linxux machine
+-----------------------
+STEP
+1. git clone https://github.com/oracle/docker-images
+2. Register in Oracle site: https://www.oracle.com/database/technologies/oracle-database-software-downloads.html
+3. Download LINUX.X64_19300_db_home.zip from oracle site
+4. Copy the LINUX.X64_193000_db_home.zip from Windows machine to Dockerfile/19.3.0 folder
+5. Build the Oracle docker image using command ./buildContainerImage.sh -v 19.3.0 -e -t oracledb:tag
+6. Run the oracle database container:
+docker run -it --name oracledb \
+-p 1521-1521 -p 5500:5500 \
+-e ORACLE_PDB=BLOGWEBSITE \
+-e ORACLE_PWD=123456 \ 
+-v oracledate:/opt/oracle/oradata \
+oracledb:2.0
+--------------
+SID:ORCLCDB
+Port:1521 - localhost
+username: sys / pwd:123456
+
+----------------KAFKA CONNECTOR-----------
+1. Establish the SimpleOracleCDC connector: 
+curl -s -X POST -H 'Content-Type: application/json' --data @/usr/share/java/confluentinc-kafka-connect-oracle-cdc/jsonCDC.json http://localhost:8083/connectors
+
+2.Check topic
+exec kafka => kafka-console-consumer --bootstrap-server localhost:9092 --topic json --from-beginning
+
+kafka-avro-console-consumer --bootstrap-server localhost:9092 --topic ORCLCDB.C__BLOGWEBSITE.BLOG --from-beginning
+
+------------------------GITHUB--------------------
+TOKEN: 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
+
+git remote set-url origin https://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@github.com/ndquoc1306/kafka-connect-oracle-cdc
+
+SMTP: izeh fgzg antn qyir
+
+docker-compose exec kafka-connect kafka-avro-console-consumer --bootstrap-server kafka:29092 --property schema.registry.url="http://schema-registry:8081" --topic ORCLCDB.C__BLOGWEBSITE.BLOG --from-beginning --property print.key=true --property print.value=true > kafka_logs.json
+
