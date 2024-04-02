@@ -33,9 +33,6 @@ exec kafka => kafka-console-consumer --bootstrap-server localhost:9092 --topic j
 kafka-avro-console-consumer --bootstrap-server localhost:9092 --topic ORCLCDB.C__BLOGWEBSITE.BLOG --from-beginning
 
 ------------------------GITHUB--------------------
-TOKEN: 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
-
-git remote set-url origin https://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@github.com/ndquoc1306/kafka-connect-oracle-cdc
 
 SMTP: izeh fgzg antn qyir
 
