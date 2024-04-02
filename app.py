@@ -64,56 +64,63 @@ for message in consumer:
     json_blog = extract_json_from_byte_string(message.value)
     parsed_message = json.loads(json_blog)
     AUTHOR_ID = parsed_message['AUTHOR_ID']
+    OP_TYPE = parsed_message['op_type']
+    TITLE = parsed_message['TITLE']
+    title_upper = TITLE.upper()
     # print("AUTHOR_ID:", AUTHOR_ID)
     # print(b64Encode(AUTHOR_ID))
     author = b64Encode(AUTHOR_ID)
-    title = parsed_message['TITLE']
     # Define the connection string
     connection_string = 'C##BLOGWEBSITE/123456@localhost:1521/ORCLCDB'
 
-    # Establish a connection to the Oracle database
-    connection = cx_Oracle.connect(connection_string)
+    if OP_TYPE == 'I':
+        # Establish a connection to the Oracle database
+        connection = cx_Oracle.connect(connection_string)
 
-    # Create a cursor object
-    cursor = connection.cursor()
+        # Create a cursor object
+        cursor = connection.cursor()
+        try:
+            # Example: Execute a SELECT query
+            cursor.execute(f"""SELECT s.EMAIL
+                                FROM "C##BLOGWEBSITE"."SUBSCRIBERS" s
+                                LEFT JOIN "C##BLOGWEBSITE"."USER_SUBSCRIBER" us ON s.SUBSCRIBER_ID = us.SUBSCRIBER_ID
+                                LEFT JOIN "C##BLOGWEBSITE"."USER" u ON us.USER_ID = u.ID
+                                LEFT JOIN "C##BLOGWEBSITE"."BLOG" b ON u.ID = b.AUTHOR_ID
+                                WHERE b.AUTHOR_ID = {author}
+                                GROUP BY s.EMAIL""")
+            # Fetch and print the results
+            for row in cursor.fetchall():
+                input_tuple_email = row
+                email_address = input_tuple_email[0]
+                print('______')
+                print(input_tuple_email)
+                print(email_address)
+                email_receiver = email_address
+                subject = f"{title_upper} has been updated in Blog Website!"
+                body = """Hope you fun with my blog"""
 
-    # Example: Execute a SELECT query
-    try:
-        cursor.execute(f"""SELECT s.EMAIL
-    FROM "C##BLOGWEBSITE".SUBSCRIBERS s
-    JOIN "C##BLOGWEBSITE".USER_SUBSCRIBER us ON s.SUBSCRIBER_ID = us.SUBSCRIBER_ID 
-    JOIN "C##BLOGWEBSITE".USER u ON us.USER_ID = u.ID 
-    JOIN "C##BLOGWEBSITE".BLOG b ON u.ID = b.AUTHOR_ID 
-    WHERE b.AUTHOR_ID = {author}""")
-        # Fetch and print the results
-        for row in cursor.fetchall():
-            input_tuple = row
-            email_address = input_tuple[0]
-            print(email_address)
-            print(title)
-            # email_receiver = email_address
-            # subject = "New blog has been updated!"
-            # body = """Hope you fun with my blog"""
-            #
-            # em = EmailMessage()
-            # em['From'] = email_sender
-            # em['To'] = email_receiver
-            # em['Subject'] = subject
-            # em.set_content(body)
-            #
-            # context = ssl.create_default_context()
-            #
-            # with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
-            #     smtp.login(email_sender, email_password)
-            #     smtp.sendmail(email_sender, email_receiver, em.as_string())
-            #     print("Done!")
-    except cx_Oracle.DatabaseError as e:
-        error, = e.args
-        print("Database error:", error.message)
+                em = EmailMessage()
+                em['From'] = email_sender
+                em['To'] = email_receiver
+                em['Subject'] = subject
+                em.set_content(body)
 
-    # Close the cursor and the connection
-    cursor.close()
-    connection.close()
+                context = ssl.create_default_context()
+
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                    smtp.login(email_sender, email_password)
+                    smtp.sendmail(email_sender, email_receiver, em.as_string())
+                    print("Done!")
+
+        except cx_Oracle.DatabaseError as e:
+            error, = e.args
+            print("Database error:", error.message)
+
+        # Close the cursor and the connection
+        cursor.close()
+        connection.close()
+    else:
+        continue
 # except KeyboardInterrupt:
 # Close the Kafka consumer on keyboard interrupt
 consumer.close()

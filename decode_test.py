@@ -35,7 +35,7 @@ SLUG = parsed_message['SLUG']
 AUTHOR_ID = parsed_message['AUTHOR_ID']
 CREATED_AT = parsed_message['CREATED_AT']
 IS_ACTIVE = parsed_message['IS_ACTIVE']
-
+OP_TYPE = parsed_message['op_type']
 # Print the extracted field values
 print("ID:", ID)
 print("TITLE:", TITLE)
@@ -43,6 +43,7 @@ print("SLUG:", SLUG)
 print("AUTHOR_ID:", AUTHOR_ID)
 print("CREATED_AT:", CREATED_AT)
 print("IS_ACTIVE:", IS_ACTIVE)
+print("OP_TYPE:", OP_TYPE)
 print(b64Encode(AUTHOR_ID))
 
 # import re
