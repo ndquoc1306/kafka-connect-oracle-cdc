@@ -2,7 +2,7 @@
 
 ## Clone this repo
 ```
-git clone https://github.com/saubury/kafka-connect-oracle-cdc
+https://github.com/ndquoc1306/kafka-connect-oracle-cdc.git
 cd kafka-connect-oracle-cdc
 ```
 
